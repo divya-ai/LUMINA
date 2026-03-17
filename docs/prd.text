@@ -1,0 +1,96 @@
+
+# 📄 PRD: Project "LUMINA" (Local Multimodal Inference App)
+
+## 1. Project Overview
+
+A Next.js-based web application that executes the **Qwen 3.5** and **Qwen 2-VL** (Vision-Language) models entirely within the user's browser using **WebGPU**. It eliminates server-side inference costs, ensures total user privacy, and provides a "frontier-model" experience on local hardware.
+
+---
+
+## 2. Technical Requirements
+
+| Component | Requirement |
+| --- | --- |
+| **Framework** | Next.js 15+ (App Router) |
+| **Runtime Engine** | Transformers.js v3 |
+| **Hardware API** | WebGPU (via ONNX Runtime Web) |
+| **Models** | Support for multiple models: <br> - `onnx-community/Qwen3.5-4B-ONNX` (Pro) <br> - `onnx-community/Qwen3.5-2B-ONNX` (Standard) <br> - `onnx-community/Qwen3.5-0.8B-ONNX` (Lite) <br> - `onnx-community/Qwen2-VL-2B-Instruct` (Vision) |
+| **Quantization** | **Q4** (4-bit) for larger models; **Q8/FP16** for 0.8B if VRAM permits |
+| **Security** | Hugging Face token secured via `.env.local` and passed to Web Worker |
+| **Model Switcher** | Dynamic loading/unloading of model weights via Web Worker |
+| **Threading** | Web Workers (to keep the UI at 60fps during inference) |
+
+---
+
+## 3. Core Features & User Stories
+
+### A. The "Zero-Server" Engine
+
+* **Feature:** Client-side Model Bootstrapping.
+* **Requirement:** On first visit, the app must download model weights (~2-3GB) and cache them in **IndexedDB**.
+* **User Story:** "As a user, I want to see a progress bar during the initial download so I know the app is setting up my local environment."
+
+### B. Multimodal Chat
+
+* **Feature:** Image + Text Input.
+* **Requirement:** Users can drag-and-drop or upload images. The system must convert images to tensors for the Qwen processor.
+* **User Story:** "As a user, I want to upload a photo of a receipt and ask the AI to calculate the total tax locally."
+
+### C. Toggleable "Reasoning" Mode
+
+* **Feature:** Chain-of-Thought (CoT) Visualizer.
+* **Requirement:** A UI toggle to show/hide the model's internal thinking process (the "Thinking" block seen in the video).
+* **User Story:** "As a developer, I want to see how the model arrived at its conclusion to verify its logic."
+
+### D. Model Switcher
+
+* **Feature:** Hot-swapping Models.
+* **Requirement:** A dropdown menu to switch between different Qwen variants (2B, 3B, 7B).
+* **Requirement:** Unload previous model from VRAM before loading the new one to prevent OOM errors.
+* **User Story:** "As a user with a powerful GPU, I want to switch to the 7B model for better accuracy."
+* **User Story:** "As a user on a laptop, I want to switch to the 2B model to save battery and ensure smooth performance."
+
+---
+
+## 4. User Interface (UI) Design Specifications
+
+To match the video's aesthetic, use **Tailwind CSS** and **Framer Motion**:
+
+* **Theme:** Deep Charcoal/Black background (`bg-zinc-950`).
+* **Typography:** Elegant serif for headers (like *Qwen 3.5 Vision*), monospace for technical stats.
+* **Animations:** Smooth "streaming" text effect as tokens are generated.
+* **Glassmorphism:** Input bars should have a subtle blur and border-glow when active.
+
+---
+
+## 5. Development Roadmap (Phases)
+
+### Phase 1: Environment Setup
+
+* Configure `next.config.mjs` to handle WebAssembly (WASM) and cross-origin isolation.
+* Initialize a Web Worker to prevent the main thread from freezing during model loading.
+
+### Phase 2: Inference Pipeline
+
+* Implement `AutoProcessor` and `AutoModelForVisualQuestionAnswering` from `@huggingface/transformers`.
+* Set `device: 'webgpu'` and `dtype: 'q4'`.
+
+### Phase 3: UI Implementation
+
+* Build the chat interface with support for image previews.
+* Add the "Token Counter" and "ms/token" metrics display to replicate the "pro" feel of the demo.
+
+---
+
+## 6. Technical Risks & Mitigations
+
+* **Risk:** User has an older GPU or browser.
+* *Mitigation:* Implement a **WebGPU Support Check** on page load. If missing, offer a fallback to WASM (slower) or show a "Compatibility Error" screen.
+
+
+* **Risk:** Large Model Size (3GB+).
+* *Mitigation:* Use `Cache API` so users only download the model once. Display a "Models are cached for future visits" notice.
+
+
+
+---
